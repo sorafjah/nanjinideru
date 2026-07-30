@@ -78,10 +78,9 @@
   .answer-area{ display:flex; justify-content:center; gap:30px; flex-wrap:wrap; margin:10px 0 4px; }
   .wheel-col{ display:flex; flex-direction:column; align-items:center; gap:6px; }
   .wheel-col .cap{ font-size:15px; color:var(--ink-soft); }
-  .wheel-nudge{ width:60px; height:44px; font-size:20px; border-radius:12px; background:#fff; color:var(--primary); border:2px solid var(--line); }
-  .wheel-nudge:active{ background:var(--soft); }
   .wheel-outer{ position:relative; width:100px; height:132px; }
-  .wheel{ height:132px; width:100px; overflow-y:scroll; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; touch-action:pan-y; }
+  .wheel{ height:132px; width:100px; overflow-y:scroll; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; touch-action:pan-y; cursor:grab; }
+  .wheel:active{ cursor:grabbing; }
   .wheel::-webkit-scrollbar{ display:none; }
   .wheel-track{ display:flex; flex-direction:column; }
   .wheel-item{ height:44px; min-height:44px; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; color:var(--ink-soft); scroll-snap-align:center; }
@@ -496,6 +495,10 @@ class Wheel{
       });
     }
     this.container.addEventListener("scroll", ()=>this.onScroll(), {passive:true});
+    this.container.addEventListener("mousedown",(e)=>{
+      dragWheelState={ wheel:this, startY:e.clientY, startScroll:this.container.scrollTop };
+      e.preventDefault();
+    });
   }
   /* scrollTop ⇔ 中央に来ている「通し番号」のあいだの正しい変換
      (コンテナの高さ=3行ぶんなので、中央に来るのは scrollTop/itemH よりも 1つ後ろのアイテム) */
@@ -520,10 +523,6 @@ class Wheel{
     this.container.scrollTop=this.scrollFromIdx(absIdx);
     this.onChange(this.values[idx]);
   }
-  nudge(dir){
-    this.container.scrollBy({top: dir*this.itemH, behavior:"auto"});
-    this.settle();
-  }
   /* いま画面に見えている位置から、待たずに その場で 正確な値を もとめる */
   getNearestValue(){
     const absIdx=this.idxFromScroll(this.container.scrollTop);
@@ -534,6 +533,19 @@ class Wheel{
 }
 
 let wheelH=null, wheelM=null;
+
+/* PCでのマウスドラッグ操作(mousemove/mouseupは1つだけ登録して使い回す) */
+let dragWheelState=null;
+document.addEventListener("mousemove",(e)=>{
+  if(!dragWheelState) return;
+  const dy=e.clientY-dragWheelState.startY;
+  dragWheelState.wheel.container.scrollTop = dragWheelState.startScroll - dy;
+});
+document.addEventListener("mouseup",()=>{
+  if(!dragWheelState) return;
+  dragWheelState.wheel.settle();
+  dragWheelState=null;
+});
 
 function buildTimeWheels(defaultH, defaultM){
   const hoursArr=[]; for(let h=23;h>=0;h--) hoursArr.push(h);
@@ -549,13 +561,6 @@ function buildTimeWheels(defaultH, defaultM){
     wheelM.setValue(defaultM, true); inM=defaultM;
   });
 
-  document.querySelectorAll(".wheel-nudge").forEach(b=>{
-    b.addEventListener("click",()=>{
-      const w = b.dataset.w==="h" ? wheelH : wheelM;
-      const dir = parseInt(b.dataset.dir);
-      w.nudge(dir);
-    });
-  });
 }
 
 /* ============================================================
@@ -589,26 +594,22 @@ function renderQuestion(){
       <div class="answer-area">
         <div class="wheel-col">
           <div class="cap"><ruby>何時<rt>なんじ</rt></ruby></div>
-          <button class="wheel-nudge" data-w="h" data-dir="-1">▲</button>
           <div class="wheel-outer">
             <div class="wheel" id="wheel-h"><div class="wheel-track"></div></div>
             <div class="wheel-fade-top"></div>
             <div class="wheel-fade-bottom"></div>
             <div class="wheel-highlight"></div>
           </div>
-          <button class="wheel-nudge" data-w="h" data-dir="1">▼</button>
           <span class="unit"><ruby>時<rt>じ</rt></ruby></span>
         </div>
         <div class="wheel-col">
           <div class="cap"><ruby>何分<rt>なんぷん</rt></ruby></div>
-          <button class="wheel-nudge" data-w="m" data-dir="-1">▲</button>
           <div class="wheel-outer">
             <div class="wheel" id="wheel-m"><div class="wheel-track"></div></div>
             <div class="wheel-fade-top"></div>
             <div class="wheel-fade-bottom"></div>
             <div class="wheel-highlight"></div>
           </div>
-          <button class="wheel-nudge" data-w="m" data-dir="1">▼</button>
           <span class="unit"><ruby>分<rt>ふん</rt></ruby></span>
         </div>
       </div>`;
@@ -1007,9 +1008,9 @@ function drawTrainBody(ctx,x,gy,w,h){
   return y;
 }
 /* ドア(左右にスライドして開閉。開＝すき間が見える／閉＝ぴったり合わさる。doorOpen=0で閉じたまま) */
-function drawTrainDoor(ctx,x,y,h,doorOpen){
-  const doorW=18, doorH=h-6;
-  const gapX=x-doorW/2, gapY=y+3;
+function drawOneDoor(ctx,cx,y,h,doorOpen,doorW){
+  const doorH=h-6;
+  const gapX=cx-doorW/2, gapY=y+3;
   ctx.fillStyle="#3b4a5a";
   ctx.fillRect(gapX,gapY,doorW,doorH);
 
@@ -1019,27 +1020,32 @@ function drawTrainDoor(ctx,x,y,h,doorOpen){
   ctx.fillRect(gapX-slide, gapY, panelW, doorH); ctx.strokeRect(gapX-slide, gapY, panelW, doorH);
   ctx.fillRect(gapX+panelW+slide, gapY, panelW, doorH); ctx.strokeRect(gapX+panelW+slide, gapY, panelW, doorH);
 }
+/* はなれた ふたつの ドア(左右にスライドして開閉。開＝すき間が見える／閉＝ぴったり合わさる) */
+function drawTrainDoors(ctx,x,y,h,doorOpen,offset,doorW){
+  drawOneDoor(ctx,x-offset,y,h,doorOpen,doorW);
+  drawOneDoor(ctx,x+offset,y,h,doorOpen,doorW);
+}
 function drawTrain(ctx,x,gy){
   const w=64,h=26;
   const y=drawTrainBody(ctx,x,gy,w,h);
   ctx.fillStyle="#eaf3fb";
-  ctx.fillRect(x-w/2+5,y+6,9,8);
-  ctx.fillRect(x-w/2+14,y+6,9,8);
-  ctx.fillRect(x+w/2-23,y+6,9,8);
-  ctx.fillRect(x+w/2-14,y+6,9,8);
-  drawTrainDoor(ctx,x,y,h,0);
+  ctx.fillRect(x-9,y+6,8,8);
+  ctx.fillRect(x+1,y+6,8,8);
+  ctx.fillRect(x-30,y+6,8,8);
+  ctx.fillRect(x+22,y+6,8,8);
+  drawTrainDoors(ctx,x,y,h,0,16,12);
 }
 function drawTrainWithDoors(ctx,x,gy,doorOpen){
   const w=76,h=30;
   const y=drawTrainBody(ctx,x,gy,w,h);
 
   ctx.fillStyle="#eaf3fb";
-  ctx.fillRect(x-w/2+7,y+6,9,8);
-  ctx.fillRect(x-w/2+20,y+6,9,8);
-  ctx.fillRect(x+w/2-29,y+6,9,8);
-  ctx.fillRect(x+w/2-16,y+6,9,8);
+  ctx.fillRect(x-11,y+6,9,8);
+  ctx.fillRect(x+2,y+6,9,8);
+  ctx.fillRect(x-34,y+6,8,8);
+  ctx.fillRect(x+26,y+6,8,8);
 
-  drawTrainDoor(ctx,x,y,h,doorOpen);
+  drawTrainDoors(ctx,x,y,h,doorOpen,19,14);
 }
 function drawClock(ctx,cx,cy,r,curMin){
   ctx.fillStyle="#fff"; ctx.strokeStyle="#3f8cd6"; ctx.lineWidth=3;
