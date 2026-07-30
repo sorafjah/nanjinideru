@@ -325,7 +325,7 @@ function makeProblem(level){
         q:`${jHL(arr)}に<ruby>駅<rt>えき</rt></ruby>に<ruby>着<rt>つ</rt></ruby>きたいな。<br><ruby>歩<rt>ある</rt></ruby>くと ${walk}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>に<ruby>家<rt>いえ</rt></ruby>を<ruby>出<rt>で</rt></ruby>たらいいかな？`,
         ans,
         exp:`${jPlain(arr)} から ${walk}分<ruby>前<rt>まえ</rt></ruby>は ${jPlain(ans)} です。`,
-        anim:{ start:ans, segs:[{kind:"walk", from:"家", to:"駅", dur:walk}], knownIdx:1, knownTime:arr },
+        anim:{ start:ans, segs:[{kind:"walk", from:"家", to:"駅", dur:walk}], knownIdx:1, knownTime:arr, reverse:true },
       };
     }
   }
@@ -353,7 +353,7 @@ function makeProblem(level){
         q:`${jHL(arr)}に<ruby>着<rt>つ</rt></ruby>きたいな。<br><ruby>電車<rt>でんしゃ</rt></ruby>は ${ride}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>の<ruby>電車<rt>でんしゃ</rt></ruby>に<ruby>乗<rt>の</rt></ruby>ればいいかな？`,
         ans,
         exp:`${jPlain(arr)} から ${ride}分<ruby>前<rt>まえ</rt></ruby>は ${jPlain(ans)} です。`,
-        anim:{ start:ans, segs:[{kind:"train", from:"A駅", to:"B駅", dur:ride}], knownIdx:1, knownTime:arr },
+        anim:{ start:ans, segs:[{kind:"train", from:"A駅", to:"B駅", dur:ride}], knownIdx:1, knownTime:arr, reverse:true },
       };
     }
   }
@@ -416,7 +416,7 @@ function makeProblem(level){
       q:`B<ruby>駅<rt>えき</rt></ruby>に ${jHL(goal)}に<ruby>着<rt>つ</rt></ruby>きたいな。<br><ruby>家<rt>いえ</rt></ruby>からA<ruby>駅<rt>えき</rt></ruby>まで<ruby>歩<rt>ある</rt></ruby>いて ${walk}<ruby>分<rt>ふん</rt></ruby>、A<ruby>駅<rt>えき</rt></ruby>からB<ruby>駅<rt>えき</rt></ruby>まで<ruby>電車<rt>でんしゃ</rt></ruby>で ${ride}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>に<ruby>家<rt>いえ</rt></ruby>を<ruby>出<rt>で</rt></ruby>たらいいかな？`,
       ans,
       exp:`${jPlain(goal)} から<ruby>電車<rt>でんしゃ</rt></ruby>の ${ride}分、<ruby>歩<rt>ある</rt></ruby>く ${walk}分 を<ruby>引<rt>ひ</rt></ruby>くと ${jPlain(ans)} です。`,
-      anim:{ start:ans, segs:[{kind:"walk",from:"家",to:"A駅",dur:walk},{kind:"train",from:"A駅",to:"B駅",dur:ride}], knownIdx:2, knownTime:goal },
+      anim:{ start:ans, segs:[{kind:"walk",from:"家",to:"A駅",dur:walk},{kind:"train",from:"A駅",to:"B駅",dur:ride}], knownIdx:2, knownTime:goal, reverse:true },
     };
   }
 }
@@ -770,18 +770,26 @@ function buildAnimUI(aslot){
     <div class="anim-readout" id="anim-readout"></div>`;
 }
 
+/* いまの問題が「巻き戻し型(答えが出発・乗車のほう)」かどうか */
+function isReverseAnim(){
+  const p=state.problems[state.idx];
+  return !!(p && p.anim && p.anim.reverse && p.anim.segs[0].kind!=="wait");
+}
+
 function setupAnimUI(p){
   const total=p.anim.segs.reduce((a,s)=>a+s.dur,0);
   animRun.total=total;
   animRun.durSec=Math.max(5, Math.min(10, total*0.4));
   animRun.progress=0; animRun.playing=false; animRun.lastTs=null;
+  const reverse=isReverseAnim();
 
   const scrub=document.getElementById("anim-scrub");
-  scrub.value=0;
+  scrub.value = reverse ? 1000 : 0; // 巻き戻し型は最初みぎ(到着ずみ)から
   scrub.addEventListener("input", (e)=>{
     if(pendingPlayTimeout){ clearTimeout(pendingPlayTimeout); pendingPlayTimeout=null; }
     stopAnimPlaying();
-    animRun.progress=parseInt(e.target.value)/1000;
+    const v=parseInt(e.target.value)/1000;
+    animRun.progress = isReverseAnim() ? (1-v) : v;
     renderAnimFrame();
   });
   document.getElementById("anim-play").addEventListener("click", toggleAnimPlay);
@@ -801,7 +809,7 @@ function stopAnimPlaying(){
 function startAnimPlaying(){
   if(animRun.progress>=1){
     animRun.progress=0;
-    const scrub=document.getElementById("anim-scrub"); if(scrub) scrub.value=0;
+    const scrub=document.getElementById("anim-scrub"); if(scrub) scrub.value = isReverseAnim() ? 1000 : 0;
     renderAnimFrame();
   }
   animRun.playing=true; animRun.lastTs=null;
@@ -818,7 +826,7 @@ function animStep(ts){
     const btn=document.getElementById("anim-play"); if(btn) btn.textContent="▶";
   }
   const scrub=document.getElementById("anim-scrub");
-  if(scrub) scrub.value=Math.round(animRun.progress*1000);
+  if(scrub) scrub.value=Math.round((isReverseAnim() ? 1-animRun.progress : animRun.progress)*1000);
   renderAnimFrame();
   if(animRun.playing) animId=requestAnimationFrame(animStep);
   else animId=null;
@@ -830,7 +838,7 @@ function revealAndPlayAnim(p){
     setupAnimUI(p);
   }
   animRun.progress=0; animRun.playing=false;
-  const scrub=document.getElementById("anim-scrub"); if(scrub) scrub.value=0;
+  const scrub=document.getElementById("anim-scrub"); if(scrub) scrub.value = isReverseAnim() ? 1000 : 0;
   const btn=document.getElementById("anim-play"); if(btn) btn.textContent="▶";
   renderAnimFrame(); // 動き出す前の静止画(家/駅)が すぐ見える
   if(pendingPlayTimeout) clearTimeout(pendingPlayTimeout);
@@ -851,8 +859,11 @@ function renderAnimFrame(){
   if(!p || !p.anim) return;
   const canReveal = state.answered || state.revealed;
   const isWait = p.anim.segs[0].kind==="wait";
-  const curMin = p.anim.start + animRun.total*animRun.progress;
-  drawScene(p, curMin, animRun.progress, canReveal || isWait);
+  const reverse = !!(p.anim.reverse && !isWait);
+  const effP = reverse ? (1-animRun.progress) : animRun.progress;
+  const curMin = p.anim.start + animRun.total*effP;
+  const hidePerson = !reverse && animRun.progress<=0; // 巻き戻し型は最初(駅)から見えている
+  drawScene(p, curMin, effP, canReveal || isWait, hidePerson);
 
   const el=document.getElementById("anim-readout");
   if(!el) return;
@@ -863,7 +874,7 @@ function renderAnimFrame(){
   }
 }
 
-function drawScene(p, curMin, progress, canReveal){
+function drawScene(p, curMin, progress, canReveal, hidePerson){
   const c=document.getElementById("anim-canvas");
   if(!c) return;
   const ctx=c.getContext("2d");
@@ -879,14 +890,14 @@ function drawScene(p, curMin, progress, canReveal){
   if(firstKind==="wait"){
     drawWaitScene(ctx, curMin, progress, W, H, groundY);
   }else{
-    drawPathScene(ctx, p, progress, curMin, W, H, groundY);
+    drawPathScene(ctx, p, progress, curMin, W, H, groundY, hidePerson);
   }
 
   if(canReveal) drawClock(ctx, W-54, 48, 34, curMin);
   else drawStopwatch(ctx, W-54, 48, 34, progress, p.anim.segs.reduce((a,s)=>a+s.dur,0));
 }
 
-function drawPathScene(ctx, p, progress, curMin, W, H, groundY){
+function drawPathScene(ctx, p, progress, curMin, W, H, groundY, hidePerson){
   const trackLeft=60, trackRight=W-180;
   const segs=p.anim.segs;
   const totalDur=segs.reduce((a,s)=>a+s.dur,0);
@@ -909,7 +920,7 @@ function drawPathScene(ctx, p, progress, curMin, W, H, groundY){
     }
   }
 
-  if(progress<=0) return; // 家(出発点)にいる間は、人・電車をまだ表示しない
+  if(hidePerson) return; // 家(出発点)にいる間は、人・電車をまだ表示しない
 
   let px=trackLeft, kind="walk";
   {
