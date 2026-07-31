@@ -165,6 +165,14 @@
           </div>
         </div>
         <div class="set-row">
+          <span class="label"><ruby>出発<rt>しゅっぱつ</rt></ruby>・<ruby>到着<rt>とうちゃく</rt></ruby></span>
+          <div class="seg" id="seg-direction">
+            <button data-v="random" class="on">ランダム</button>
+            <button data-v="depart"><ruby>出発<rt>しゅっぱつ</rt></ruby><ruby>時刻<rt>じこく</rt></ruby></button>
+            <button data-v="arrival"><ruby>到着<rt>とうちゃく</rt></ruby><ruby>時刻<rt>じこく</rt></ruby></button>
+          </div>
+        </div>
+        <div class="set-row">
           <span class="label"><ruby>問題<rt>もんだい</rt></ruby>の<ruby>数<rt>かず</rt></ruby></span>
           <div class="stepper-box">
             <button class="step-btn" id="cnt-minus">▽</button>
@@ -182,7 +190,8 @@
         </div>
         <p style="font-size:13px;color:var(--ink-soft);margin:6px 2px 0;">
           <ruby>時刻<rt>じこく</rt></ruby>と<ruby>時間<rt>じかん</rt></ruby>はいつも5<ruby>分<rt>ふん</rt></ruby>きざみです。<br>
-          <ruby>易<rt>やさ</rt></ruby>しい＝<ruby>短<rt>みじか</rt></ruby>い<ruby>時間<rt>じかん</rt></ruby>で<ruby>時<rt>じ</rt></ruby>をまたぎません。<ruby>普通<rt>ふつう</rt></ruby>＝<ruby>普通<rt>ふつう</rt></ruby>の<ruby>時間<rt>じかん</rt></ruby>で<ruby>時<rt>じ</rt></ruby>をまたぐこともあります。<ruby>難<rt>むずか</rt></ruby>しい＝<ruby>長<rt>なが</rt></ruby>い<ruby>時間<rt>じかん</rt></ruby>で、<ruby>時刻表<rt>じこくひょう</rt></ruby>も<ruby>細<rt>こま</rt></ruby>かくなります。
+          <ruby>易<rt>やさ</rt></ruby>しい＝<ruby>短<rt>みじか</rt></ruby>い<ruby>時間<rt>じかん</rt></ruby>で<ruby>時<rt>じ</rt></ruby>をまたぎません。<ruby>普通<rt>ふつう</rt></ruby>＝<ruby>普通<rt>ふつう</rt></ruby>の<ruby>時間<rt>じかん</rt></ruby>で<ruby>時<rt>じ</rt></ruby>をまたぐこともあります。<ruby>難<rt>むずか</rt></ruby>しい＝<ruby>長<rt>なが</rt></ruby>い<ruby>時間<rt>じかん</rt></ruby>で、<ruby>時刻表<rt>じこくひょう</rt></ruby>も<ruby>細<rt>こま</rt></ruby>かくなります。<br>
+          <ruby>出発<rt>しゅっぱつ</rt></ruby>・<ruby>到着<rt>とうちゃく</rt></ruby>は レベル1・2・5だけに つかわれます。<ruby>出発<rt>しゅっぱつ</rt></ruby><ruby>時刻<rt>じこく</rt></ruby>＝わかっている<ruby>時刻<rt>じこく</rt></ruby>から<ruby>後<rt>あと</rt></ruby>を<ruby>求<rt>もと</rt></ruby>めます。<ruby>到着<rt>とうちゃく</rt></ruby><ruby>時刻<rt>じこく</rt></ruby>＝わかっている<ruby>時刻<rt>じこく</rt></ruby>から<ruby>前<rt>まえ</rt></ruby>を<ruby>求<rt>もと</rt></ruby>めます(アニメは<ruby>巻<rt>ま</rt></ruby>き<ruby>戻<rt>もど</rt></ruby>し)。
         </p>
       </details>
     </div>
@@ -228,7 +237,7 @@
 ============================================================ */
 const state = {
   level: 1,
-  settings: { diff: "normal", count: 5, sound: true },
+  settings: { diff: "normal", count: 5, sound: true, direction: "random" },
   problems: [],
   idx: 0,
   score: 0,
@@ -299,12 +308,20 @@ function soundNG(){ beep([300],0.22,"triangle"); }
 /* ============================================================
    もんだい せいせい
 ============================================================ */
+/* れべる1,2,5の むき(前向き/後ろ向き)を せんせいの せっていから きめる */
+function pickBack(){
+  const d=state.settings.direction;
+  if(d==="depart") return false;  // 出発時刻がわかっている→こたえは到着(前向き)
+  if(d==="arrival") return true;  // 到着時刻がわかっている→こたえは出発(後ろ向き)
+  return Math.random()<0.5;       // ランダム
+}
+
 function makeProblem(level){
   const p = DIFF[state.settings.diff];
 
   if(level===1){
     const walk = rM5(p.walk);
-    const back = Math.random()<0.5;
+    const back = pickBack();
     if(!back){
       let now;
       do{ now=time5(7,17); }while(!p.crossHour && !sameHour(now, now+walk));
@@ -332,7 +349,7 @@ function makeProblem(level){
 
   if(level===2){
     const ride = rM5(p.ride);
-    const back = Math.random()<0.5;
+    const back = pickBack();
     if(!back){
       let now;
       do{ now=time5(7,17); }while(!p.crossHour && !sameHour(now, now+ride));
@@ -408,16 +425,30 @@ function makeProblem(level){
   if(level===5){
     const walk = rM5(p.walk);
     const ride = rM5(p.ride);
-    let goal;
-    do{ goal = time5(9,17); }while( goal - ride - walk < 6*60 );
-    const ans = goal - ride - walk;
-    return {
-      type:"time",
-      q:`B<ruby>駅<rt>えき</rt></ruby>に ${jHL(goal)}に<ruby>着<rt>つ</rt></ruby>きたいな。<br><ruby>家<rt>いえ</rt></ruby>からA<ruby>駅<rt>えき</rt></ruby>まで<ruby>歩<rt>ある</rt></ruby>いて ${walk}<ruby>分<rt>ふん</rt></ruby>、A<ruby>駅<rt>えき</rt></ruby>からB<ruby>駅<rt>えき</rt></ruby>まで<ruby>電車<rt>でんしゃ</rt></ruby>で ${ride}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>に<ruby>家<rt>いえ</rt></ruby>を<ruby>出<rt>で</rt></ruby>たらいいかな？`,
-      ans,
-      exp:`${jPlain(goal)} から<ruby>電車<rt>でんしゃ</rt></ruby>の ${ride}分、<ruby>歩<rt>ある</rt></ruby>く ${walk}分 を<ruby>引<rt>ひ</rt></ruby>くと ${jPlain(ans)} です。`,
-      anim:{ start:ans, segs:[{kind:"walk",from:"家",to:"A駅",dur:walk},{kind:"train",from:"A駅",to:"B駅",dur:ride}], knownIdx:2, knownTime:goal, reverse:true },
-    };
+    const back = pickBack();
+    if(back){
+      let goal;
+      do{ goal = time5(9,17); }while( goal - ride - walk < 6*60 );
+      const ans = goal - ride - walk;
+      return {
+        type:"time",
+        q:`B<ruby>駅<rt>えき</rt></ruby>に ${jHL(goal)}に<ruby>着<rt>つ</rt></ruby>きたいな。<br><ruby>家<rt>いえ</rt></ruby>からA<ruby>駅<rt>えき</rt></ruby>まで<ruby>歩<rt>ある</rt></ruby>いて ${walk}<ruby>分<rt>ふん</rt></ruby>、A<ruby>駅<rt>えき</rt></ruby>からB<ruby>駅<rt>えき</rt></ruby>まで<ruby>電車<rt>でんしゃ</rt></ruby>で ${ride}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>に<ruby>家<rt>いえ</rt></ruby>を<ruby>出<rt>で</rt></ruby>たらいいかな？`,
+        ans,
+        exp:`${jPlain(goal)} から<ruby>電車<rt>でんしゃ</rt></ruby>の ${ride}分、<ruby>歩<rt>ある</rt></ruby>く ${walk}分 を<ruby>引<rt>ひ</rt></ruby>くと ${jPlain(ans)} です。`,
+        anim:{ start:ans, segs:[{kind:"walk",from:"家",to:"A駅",dur:walk},{kind:"train",from:"A駅",to:"B駅",dur:ride}], knownIdx:2, knownTime:goal, reverse:true },
+      };
+    }else{
+      let now;
+      do{ now = time5(7,17); }while( now + walk + ride >= 24*60 );
+      const ans = now + walk + ride;
+      return {
+        type:"time",
+        q:`<ruby>今<rt>いま</rt></ruby> ${jHL(now)}です。<ruby>家<rt>いえ</rt></ruby>からA<ruby>駅<rt>えき</rt></ruby>まで<ruby>歩<rt>ある</rt></ruby>いて ${walk}<ruby>分<rt>ふん</rt></ruby>、A<ruby>駅<rt>えき</rt></ruby>からB<ruby>駅<rt>えき</rt></ruby>まで<ruby>電車<rt>でんしゃ</rt></ruby>で ${ride}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>にB<ruby>駅<rt>えき</rt></ruby>に<ruby>着<rt>つ</rt></ruby>くかな？`,
+        ans,
+        exp:`${jPlain(now)} に ${walk}分、${ride}分<ruby>足<rt>た</rt></ruby>すと ${jPlain(ans)} です。`,
+        anim:{ start:now, segs:[{kind:"walk",from:"家",to:"A駅",dur:walk},{kind:"train",from:"A駅",to:"B駅",dur:ride}], knownIdx:0, knownTime:now },
+      };
+    }
   }
 }
 
@@ -448,6 +479,12 @@ function bindSettings(){
     b.addEventListener("click",()=>{
       document.querySelectorAll("#seg-diff button").forEach(x=>x.classList.remove("on"));
       b.classList.add("on"); state.settings.diff=b.dataset.v;
+    });
+  });
+  document.querySelectorAll("#seg-direction button").forEach(b=>{
+    b.addEventListener("click",()=>{
+      document.querySelectorAll("#seg-direction button").forEach(x=>x.classList.remove("on"));
+      b.classList.add("on"); state.settings.direction=b.dataset.v;
     });
   });
   document.querySelectorAll("#seg-sound button").forEach(b=>{
