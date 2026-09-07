@@ -107,14 +107,15 @@
   /* アニメーション */
   .anim-wrap{ text-align:center; margin:2px 0; }
   canvas{ width:100%; max-width:560px; height:auto; background:#eef5fb; border-radius:14px; display:block; margin:0 auto; }
-  .anim-controls{ display:flex; align-items:center; gap:12px; max-width:560px; margin:6px auto 2px; }
-  .anim-playbtn{ width:40px; height:40px; border-radius:50%; background:#fff; color:var(--primary); font-size:13px; border:2px solid var(--line); box-shadow:none; flex:0 0 auto; }
-  .anim-playbtn:active{ background:var(--soft); }
+  .anim-controls{ display:flex; align-items:center; gap:10px; max-width:560px; margin:8px auto 2px; }
+  .anim-playbtn{ width:40px; height:40px; min-width:40px; border-radius:50%; background:#dceefc; color:var(--primary-dark); font-size:15px; border:none; flex:0 0 auto; display:flex; align-items:center; justify-content:center; }
+  .anim-playbtn:active{ background:#c8e4f9; }
+  .anim-playbtn.active{ background:var(--primary); color:#fff; }
   .anim-range{ flex:1; height:40px; -webkit-appearance:none; appearance:none; background:transparent; touch-action:pan-x; }
   .anim-range::-webkit-slider-runnable-track{ height:6px; border-radius:6px; background:var(--line); }
-  .anim-range::-webkit-slider-thumb{ -webkit-appearance:none; width:26px; height:26px; margin-top:-10px; border-radius:50%; background:var(--primary); border:3px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+  .anim-range::-webkit-slider-thumb{ -webkit-appearance:none; width:26px; height:26px; margin-top:-10px; border-radius:50%; background:#dceefc; border:3px solid var(--primary); box-shadow:0 1px 4px rgba(0,0,0,.25); }
   .anim-range::-moz-range-track{ height:6px; border-radius:6px; background:var(--line); }
-  .anim-range::-moz-range-thumb{ width:26px; height:26px; border-radius:50%; background:var(--primary); border:3px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+  .anim-range::-moz-range-thumb{ width:26px; height:26px; border-radius:50%; background:#dceefc; border:3px solid var(--primary); box-shadow:0 1px 4px rgba(0,0,0,.25); }
   .anim-readout{ text-align:center; font-size:16px; color:var(--ink-soft); margin-top:0; min-height:0; }
 
   .feedback{ text-align:center; font-size:21px; font-weight:700; min-height:28px; margin:6px 0 2px; }
@@ -785,13 +786,15 @@ function showResult(){
    ・正解後/こたえを見た後は「本物の時計」に切りかえ
    ・れべる3/4は、答えが分かってしまうので、正解後にだけ
      「電車を待つ→来る→ドアが開く→閉まる→発車」を再生する
-   ・指でスライド(スクラブバー)で 前後に うごかせる
+   ・れべる1/2/5は、指でスライド、または◁▷ボタンで
+     前後どちらにも うごかせる(みんなで版と同じ双方向方式)
    ・requestAnimationFrame は デルタタイム方式(120Hz端末でも同速)
 ============================================================ */
 let animId=null;
 let pendingPlayTimeout=null;
-const animRun = { playing:false, total:0, durSec:6, progress:0, lastTs:null };
-const WAIT_PH = { eventStart:0.65, arriveEnd:0.80, doorOpenEnd:0.86, boardEnd:0.90, doorCloseEnd:0.93 };
+const EDGE_EPS = 0.001;
+const animRun = { playing:false, total:0, durSec:6, progress:0, dir:1, lastTs:null };
+const WAIT_PH = { eventStart:0.5, arriveEnd:0.68, doorOpenEnd:0.78, boardEnd:0.85, doorCloseEnd:0.9 };
 
 function stopAnimAll(){
   animRun.playing=false; animRun.lastTs=null;
@@ -800,13 +803,27 @@ function stopAnimAll(){
 }
 
 function buildAnimUI(aslot){
-  aslot.innerHTML=`
-    <canvas id="anim-canvas" width="560" height="170"></canvas>
-    <div class="anim-controls">
-      <button class="anim-playbtn" id="anim-play">▶</button>
-      <input type="range" id="anim-scrub" class="anim-range" min="0" max="1000" value="0">
-    </div>
-    <div class="anim-readout" id="anim-readout"></div>`;
+  const p=state.problems[state.idx];
+  const isWait = p.anim.segs[0].kind==="wait";
+  if(isWait){
+    /* れべる3/4: 待つシーンは今まで通り、再生専用のシークバーのみ表示 */
+    aslot.innerHTML=`
+      <canvas id="anim-canvas" width="560" height="170"></canvas>
+      <div class="anim-controls">
+        <input type="range" id="anim-scrub" class="anim-range" min="0" max="1000" value="0">
+      </div>
+      <div class="anim-readout" id="anim-readout"></div>`;
+  }else{
+    /* れべる1/2/5: みんなで版と同じ ◁▷ 双方向コントロール */
+    aslot.innerHTML=`
+      <canvas id="anim-canvas" width="560" height="170"></canvas>
+      <div class="anim-controls">
+        <button class="anim-playbtn" id="anim-back">◁</button>
+        <input type="range" id="anim-scrub" class="anim-range" min="0" max="1000" value="0">
+        <button class="anim-playbtn" id="anim-fwd">▷</button>
+      </div>
+      <div class="anim-readout" id="anim-readout"></div>`;
+  }
 }
 
 /* いまの問題が「巻き戻し型(答えが出発・乗車のほう)」かどうか */
@@ -817,42 +834,102 @@ function isReverseAnim(){
 
 function setupAnimUI(p){
   const total=p.anim.segs.reduce((a,s)=>a+s.dur,0);
+  const isWait = p.anim.segs[0].kind==="wait";
   animRun.total=total;
-  animRun.durSec=Math.max(5, Math.min(10, total*0.4));
-  animRun.progress=0; animRun.playing=false; animRun.lastTs=null;
+  /* 待つシーンは電車が速く感じられやすいため、すこし長めの再生時間にする */
+  animRun.durSec = isWait ? Math.max(8, Math.min(14, total*0.5)) : Math.max(5, Math.min(10, total*0.4));
+  animRun.progress=0; animRun.playing=false; animRun.lastTs=null; animRun.dir=1;
   const reverse=isReverseAnim();
 
   const scrub=document.getElementById("anim-scrub");
   scrub.value = reverse ? 1000 : 0; // 巻き戻し型は最初みぎ(到着ずみ)から
-  scrub.addEventListener("input", (e)=>{
-    if(pendingPlayTimeout){ clearTimeout(pendingPlayTimeout); pendingPlayTimeout=null; }
-    stopAnimPlaying();
-    const v=parseInt(e.target.value)/1000;
-    animRun.progress = isReverseAnim() ? (1-v) : v;
-    renderAnimFrame();
-  });
-  document.getElementById("anim-play").addEventListener("click", toggleAnimPlay);
+  if(reverse) animRun.progress=1;
+
+  if(isWait){
+    scrub.addEventListener("input", (e)=>{
+      if(pendingPlayTimeout){ clearTimeout(pendingPlayTimeout); pendingPlayTimeout=null; }
+      stopAnimPlaying();
+      const v=parseInt(e.target.value)/1000;
+      animRun.progress = v;
+      renderAnimFrame();
+    });
+  }else{
+    scrub.addEventListener("input", (e)=>{
+      stopAnimPlaying();
+      const v=parseInt(e.target.value)/1000;
+      animRun.progress = v;
+      renderAnimFrame();
+    });
+    document.getElementById("anim-fwd").addEventListener("click",()=> togglePlayDir(1));
+    document.getElementById("anim-back").addEventListener("click",()=> togglePlayDir(-1));
+    updatePlayButtons();
+  }
   renderAnimFrame();
 }
 
-function toggleAnimPlay(){
-  if(pendingPlayTimeout){ clearTimeout(pendingPlayTimeout); pendingPlayTimeout=null; }
-  if(animRun.playing) stopAnimPlaying();
-  else startAnimPlaying();
+/* --- れべる1/2/5用: みんなで版と同じ ◁▷ 双方向再生 --- */
+function togglePlayDir(dir){
+  const atEnd = animRun.progress >= 1-EDGE_EPS;
+  const atStart = animRun.progress <= EDGE_EPS;
+  if(animRun.playing && animRun.dir===dir){ stopAnimPlaying(); return; }
+  if(dir===1 && atEnd){
+    animRun.progress=0;
+    syncScrubFromProgress();
+    renderAnimFrame();
+  }
+  if(dir===-1 && atStart){
+    animRun.progress=1;
+    syncScrubFromProgress();
+    renderAnimFrame();
+  }
+  startAnimPlayingDir(dir);
 }
+function startAnimPlayingDir(dir){
+  animRun.dir=dir; animRun.playing=true; animRun.lastTs=null;
+  updatePlayButtons();
+  animId=requestAnimationFrame(animStepDir);
+}
+function updatePlayButtons(){
+  const fwdBtn=document.getElementById("anim-fwd");
+  const backBtn=document.getElementById("anim-back");
+  if(!fwdBtn || !backBtn) return;
+  const fwdOn = animRun.playing && animRun.dir===1;
+  const backOn = animRun.playing && animRun.dir===-1;
+  fwdBtn.classList.toggle("active", fwdOn);
+  backBtn.classList.toggle("active", backOn);
+  fwdBtn.textContent = fwdOn ? "❚❚" : "▷";
+  backBtn.textContent = backOn ? "❚❚" : "◁";
+}
+function syncScrubFromProgress(){
+  const scrub=document.getElementById("anim-scrub");
+  if(scrub) scrub.value=Math.round(animRun.progress*1000);
+}
+function animStepDir(ts){
+  if(!animRun.playing) return;
+  if(animRun.lastTs===null) animRun.lastTs=ts;
+  const dt=(ts-animRun.lastTs)/1000; animRun.lastTs=ts;
+  animRun.progress += (dt/animRun.durSec) * animRun.dir;
+  if(animRun.dir>0 && animRun.progress>=1-EDGE_EPS){ animRun.progress=1; stopAnimPlaying(); }
+  else if(animRun.dir<0 && animRun.progress<=EDGE_EPS){ animRun.progress=0; stopAnimPlaying(); }
+  syncScrubFromProgress();
+  renderAnimFrame();
+  if(animRun.playing) animId=requestAnimationFrame(animStepDir);
+  else animId=null;
+}
+
+/* --- れべる3/4用: 待つシーンの 一方向自動再生(答え合わせ後のみ) --- */
 function stopAnimPlaying(){
   animRun.playing=false;
-  const btn=document.getElementById("anim-play"); if(btn) btn.textContent="▶";
+  updatePlayButtons();
   if(animId){ cancelAnimationFrame(animId); animId=null; }
 }
 function startAnimPlaying(){
   if(animRun.progress>=1){
     animRun.progress=0;
-    const scrub=document.getElementById("anim-scrub"); if(scrub) scrub.value = isReverseAnim() ? 1000 : 0;
+    const scrub=document.getElementById("anim-scrub"); if(scrub) scrub.value=0;
     renderAnimFrame();
   }
-  animRun.playing=true; animRun.lastTs=null;
-  const btn=document.getElementById("anim-play"); if(btn) btn.textContent="❚❚";
+  animRun.playing=true; animRun.lastTs=null; animRun.dir=1;
   animId=requestAnimationFrame(animStep);
 }
 function animStep(ts){
@@ -862,10 +939,9 @@ function animStep(ts){
   animRun.progress += dt/animRun.durSec;
   if(animRun.progress>=1){
     animRun.progress=1; animRun.playing=false;
-    const btn=document.getElementById("anim-play"); if(btn) btn.textContent="▶";
   }
   const scrub=document.getElementById("anim-scrub");
-  if(scrub) scrub.value=Math.round((isReverseAnim() ? 1-animRun.progress : animRun.progress)*1000);
+  if(scrub) scrub.value=Math.round(animRun.progress*1000);
   renderAnimFrame();
   if(animRun.playing) animId=requestAnimationFrame(animStep);
   else animId=null;
@@ -877,8 +953,7 @@ function revealAndPlayAnim(p){
     setupAnimUI(p);
   }
   animRun.progress=0; animRun.playing=false;
-  const scrub=document.getElementById("anim-scrub"); if(scrub) scrub.value = isReverseAnim() ? 1000 : 0;
-  const btn=document.getElementById("anim-play"); if(btn) btn.textContent="▶";
+  const scrub=document.getElementById("anim-scrub"); if(scrub) scrub.value=0;
   renderAnimFrame(); // 動き出す前の静止画(家/駅)が すぐ見える
   if(pendingPlayTimeout) clearTimeout(pendingPlayTimeout);
   pendingPlayTimeout=setTimeout(()=>{ pendingPlayTimeout=null; startAnimPlaying(); }, 2000);
@@ -899,10 +974,10 @@ function renderAnimFrame(){
   const canReveal = state.answered || state.revealed;
   const isWait = p.anim.segs[0].kind==="wait";
   const reverse = !!(p.anim.reverse && !isWait);
-  const effP = reverse ? (1-animRun.progress) : animRun.progress;
-  const curMin = p.anim.start + animRun.total*effP;
-  const hidePerson = !reverse && animRun.progress<=0; // 巻き戻し型は最初(駅)から見えている
-  drawScene(p, curMin, effP, canReveal || isWait, hidePerson);
+  const progress = animRun.progress;
+  const curMin = p.anim.start + animRun.total*progress;
+  const hidePerson = !reverse && progress<=0; // 巻き戻し型は最初(駅)から見えている
+  drawScene(p, curMin, progress, canReveal || isWait, hidePerson);
 
   const el=document.getElementById("anim-readout");
   if(!el) return;
@@ -961,19 +1036,19 @@ function drawPathScene(ctx, p, progress, curMin, W, H, groundY, hidePerson){
 
   if(hidePerson) return; // 家(出発点)にいる間は、人・電車をまだ表示しない
 
+  /* 人・電車の うごく はやさは、区間の分数にかかわらず そろえる
+     (乗る前(歩く)と乗った後(電車)を おなじくらいの はやさに 見せるため、
+      progress を セグメント数で きんとうに わりあてる) */
   let px=trackLeft, kind="walk";
   {
-    let moved=progress*totalDur;
-    let a=0;
-    for(let i=0;i<segs.length;i++){
-      if(moved<=a+segs[i].dur || i===segs.length-1){
-        const r=Math.min(1,Math.max(0,(moved-a)/segs[i].dur));
-        px = xs[i] + (xs[i+1]-xs[i])*r;
-        kind=segs[i].kind;
-        break;
-      }
-      a+=segs[i].dur;
-    }
+    const nSeg=segs.length;
+    const scaled=progress*nSeg;
+    let segIdx=Math.floor(scaled);
+    if(segIdx>=nSeg) segIdx=nSeg-1;
+    if(segIdx<0) segIdx=0;
+    const r=Math.min(1,Math.max(0, scaled-segIdx));
+    px = xs[segIdx] + (xs[segIdx+1]-xs[segIdx])*r;
+    kind=segs[segIdx].kind;
   }
   if(kind==="walk") drawPerson(ctx,px,groundY,curMin);
   else drawTrain(ctx,px,groundY);
@@ -1116,6 +1191,7 @@ function drawTrainWithDoors(ctx,x,gy,doorOpen){
 
   drawTrainDoors(ctx,x,y,h,doorOpen,19,14);
 }
+/* 時計(みんなで版と同じ 見た目) */
 function drawClock(ctx,cx,cy,r,curMin){
   ctx.fillStyle="#fff"; ctx.strokeStyle="#3f8cd6"; ctx.lineWidth=3;
   ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.fill(); ctx.stroke();
@@ -1140,18 +1216,25 @@ function drawClock(ctx,cx,cy,r,curMin){
   ctx.fillStyle="#2b3a4a"; ctx.font="bold 16px 'BIZ UDPGothic'";
   ctx.fillText(jDigital(Math.round(curMin)), cx, cy+r+32);
 }
+/* ストップウォッチ(みんなで版と同じ「回転する針」タイプ。
+   経過時間だけを示す針が 問題全体の所要時間で ちょうど1周する) */
 function drawStopwatch(ctx,cx,cy,r,progress,total){
   ctx.fillStyle="#fff"; ctx.strokeStyle="#ff9f5a"; ctx.lineWidth=4;
   ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
   ctx.fillStyle="#ff9f5a"; ctx.fillRect(cx-6,cy-r-9,12,10);
-  ctx.strokeStyle="#3f8cd6"; ctx.lineWidth=6; ctx.lineCap="round";
+
+  const angle = -Math.PI/2 + Math.PI*2*Math.max(0,Math.min(1,progress));
+  ctx.strokeStyle="#3f8cd6"; ctx.lineWidth=4; ctx.lineCap="round";
   ctx.beginPath();
-  ctx.arc(cx,cy,r-10,-Math.PI/2, -Math.PI/2 + Math.PI*2*Math.max(0.0001,progress));
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(angle)*(r*0.68), cy+Math.sin(angle)*(r*0.68));
   ctx.stroke();
-  ctx.fillStyle="#2b3a4a"; ctx.font="bold 20px 'BIZ UDPGothic'"; ctx.textAlign="center"; ctx.textBaseline="middle";
-  ctx.fillText(`${Math.round(total*progress)}`, cx, cy-4);
-  ctx.font="12px 'BIZ UDPGothic'"; ctx.fillText("ふん", cx, cy+14);
-  ctx.textBaseline="alphabetic";
+  ctx.fillStyle="#2b3a4a"; ctx.beginPath(); ctx.arc(cx,cy,3,0,7); ctx.fill();
+
+  ctx.fillStyle="#5a6b7b"; ctx.font="11px 'BIZ UDPGothic'"; ctx.textAlign="center";
+  ctx.fillText("けいか", cx, cy+r+16);
+  ctx.fillStyle="#2b3a4a"; ctx.font="bold 16px 'BIZ UDPGothic'";
+  ctx.fillText(`${Math.round(total*Math.max(0,Math.min(1,progress)))}ふん`, cx, cy+r+32);
 }
 
 /* ============================================================
