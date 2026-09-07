@@ -90,9 +90,9 @@
   .wheel-highlight{ position:absolute; left:2px; right:2px; top:44px; height:44px; border-top:3px solid var(--primary); border-bottom:3px solid var(--primary); pointer-events:none; z-index:1; background:rgba(63,140,214,.08); border-radius:8px; }
   .unit{ font-size:20px; color:var(--ink-soft); }
 
-  /* 4択 */
-  .choice-area{ display:flex; flex-direction:column; gap:12px; max-width:360px; margin:6px auto 2px; }
-  .choice-btn{ min-height:56px; font-size:22px; font-weight:700; background:#fff; color:var(--ink); border:2px solid var(--line); border-radius:14px; }
+  /* 4択(2列×2行で横に並べる) */
+  .choice-area{ display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:420px; margin:6px auto 2px; }
+  .choice-btn{ min-height:56px; font-size:20px; font-weight:700; background:#fff; color:var(--ink); border:2px solid var(--line); border-radius:14px; padding:0 6px; }
   .choice-btn.sel{ background:var(--accent); color:#fff; border-color:var(--accent-dark); }
 
   /* 入力方式きりかえ */
