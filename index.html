@@ -90,6 +90,16 @@
   .wheel-highlight{ position:absolute; left:2px; right:2px; top:44px; height:44px; border-top:3px solid var(--primary); border-bottom:3px solid var(--primary); pointer-events:none; z-index:1; background:rgba(63,140,214,.08); border-radius:8px; }
   .unit{ font-size:20px; color:var(--ink-soft); }
 
+  /* 4択 */
+  .choice-area{ display:flex; flex-direction:column; gap:12px; max-width:360px; margin:6px auto 2px; }
+  .choice-btn{ min-height:56px; font-size:22px; font-weight:700; background:#fff; color:var(--ink); border:2px solid var(--line); border-radius:14px; }
+  .choice-btn.sel{ background:var(--accent); color:#fff; border-color:var(--accent-dark); }
+
+  /* 入力方式きりかえ */
+  .mode-switch{ display:flex; justify-content:center; gap:8px; margin:0 0 10px; }
+  .mode-switch button{ min-height:40px; padding:0 14px; font-size:14px; background:#eef4fa; color:var(--ink); border:2px solid transparent; border-radius:12px; }
+  .mode-switch button.on{ background:var(--primary); color:#fff; }
+
   /* 時刻表 */
   .tt-wrap{ display:flex; justify-content:center; margin:10px 0; }
   .tt-list{ display:flex; flex-direction:column; gap:8px; width:min(280px,90%); }
@@ -174,6 +184,13 @@
           </div>
         </div>
         <div class="set-row">
+          <span class="label"><ruby>答<rt>こた</rt></ruby>え<ruby>方<rt>かた</rt></ruby></span>
+          <div class="seg" id="seg-inputmode">
+            <button data-v="wheel">ドラムロール</button>
+            <button data-v="choice" class="on">4<ruby>択<rt>たく</rt></ruby></button>
+          </div>
+        </div>
+        <div class="set-row">
           <span class="label"><ruby>問題<rt>もんだい</rt></ruby>の<ruby>数<rt>かず</rt></ruby></span>
           <div class="stepper-box">
             <button class="step-btn" id="cnt-minus">▽</button>
@@ -192,7 +209,9 @@
         <p style="font-size:13px;color:var(--ink-soft);margin:6px 2px 0;">
           <ruby>時刻<rt>じこく</rt></ruby>と<ruby>時間<rt>じかん</rt></ruby>はいつも5<ruby>分<rt>ふん</rt></ruby>きざみです(<ruby>歩<rt>ある</rt></ruby>く<ruby>時間<rt>じかん</rt></ruby>のみ2〜15<ruby>分<rt>ふん</rt></ruby>のこともあります)。<br>
           <ruby>易<rt>やさ</rt></ruby>しい＝<ruby>短<rt>みじか</rt></ruby>い<ruby>時間<rt>じかん</rt></ruby>で<ruby>時<rt>じ</rt></ruby>をまたぎません。<ruby>普通<rt>ふつう</rt></ruby>＝<ruby>普通<rt>ふつう</rt></ruby>の<ruby>時間<rt>じかん</rt></ruby>で<ruby>時<rt>じ</rt></ruby>をまたぐこともあります。<ruby>難<rt>むずか</rt></ruby>しい＝<ruby>長<rt>なが</rt></ruby>い<ruby>時間<rt>じかん</rt></ruby>で、<ruby>時刻表<rt>じこくひょう</rt></ruby>も<ruby>細<rt>こま</rt></ruby>かくなります。<br>
-          <ruby>出発<rt>しゅっぱつ</rt></ruby>・<ruby>到着<rt>とうちゃく</rt></ruby>は レベル1・2・5だけに つかわれます。<ruby>出発<rt>しゅっぱつ</rt></ruby><ruby>時刻<rt>じこく</rt></ruby>＝わかっている<ruby>時刻<rt>じこく</rt></ruby>から<ruby>後<rt>あと</rt></ruby>を<ruby>求<rt>もと</rt></ruby>めます。<ruby>到着<rt>とうちゃく</rt></ruby><ruby>時刻<rt>じこく</rt></ruby>＝わかっている<ruby>時刻<rt>じこく</rt></ruby>から<ruby>前<rt>まえ</rt></ruby>を<ruby>求<rt>もと</rt></ruby>めます(アニメは<ruby>巻<rt>ま</rt></ruby>き<ruby>戻<rt>もど</rt></ruby>し)。
+          <ruby>出発<rt>しゅっぱつ</rt></ruby>・<ruby>到着<rt>とうちゃく</rt></ruby>は レベル1・2・5だけに つかわれます。<ruby>出発<rt>しゅっぱつ</rt></ruby><ruby>時刻<rt>じこく</rt></ruby>＝わかっている<ruby>時刻<rt>じこく</rt></ruby>から<ruby>後<rt>あと</rt></ruby>を<ruby>求<rt>もと</rt></ruby>めます。<ruby>到着<rt>とうちゃく</rt></ruby><ruby>時刻<rt>じこく</rt></ruby>＝わかっている<ruby>時刻<rt>じこく</rt></ruby>から<ruby>前<rt>まえ</rt></ruby>を<ruby>求<rt>もと</rt></ruby>めます(アニメは<ruby>巻<rt>ま</rt></ruby>き<ruby>戻<rt>もど</rt></ruby>し)。<br>
+          <ruby>答<rt>こた</rt></ruby>え<ruby>方<rt>かた</rt></ruby>(レベル1・2・5)は、ここでの<ruby>設定<rt>せってい</rt></ruby>が<ruby>最初<rt>さいしょ</rt></ruby>の<ruby>選択<rt>せんたく</rt></ruby>になり、<ruby>活動中<rt>かつどうちゅう</rt></ruby>にいつでも<ruby>切<rt>き</rt></ruby>り<ruby>替<rt>か</rt></ruby>えられます。<br>
+          4<ruby>択<rt>たく</rt></ruby>の<ruby>選択肢<rt>せんたくし</rt></ruby>には、ときどき「<ruby>分<rt>ふん</rt></ruby>は<ruby>合<rt>あ</rt></ruby>っているが<ruby>時<rt>じ</rt></ruby>だけズレている」まぎらわしい<ruby>選択肢<rt>せんたくし</rt></ruby>も<ruby>混<rt>ま</rt></ruby>ざります。
         </p>
       </details>
     </div>
@@ -207,6 +226,7 @@
     <div class="card">
       <div class="question" id="question"></div>
       <div id="anim-slot" class="anim-wrap"></div>
+      <div id="mode-switch-slot"></div>
       <div id="answer-slot"></div>
       <div class="feedback" id="feedback"></div>
       <div class="explain" id="explain"></div>
@@ -238,7 +258,7 @@
 ============================================================ */
 const state = {
   level: 1,
-  settings: { diff: "normal", count: 5, sound: true, direction: "random" },
+  settings: { diff: "normal", count: 5, sound: true, direction: "random", inputMode: "choice" },
   problems: [],
   idx: 0,
   score: 0,
@@ -319,6 +339,42 @@ function pickBack(){
   return Math.random()<0.5;       // ランダム
 }
 
+/* 4択用: 正解ansのほかに、もっともらしい誤答を3つ作る(すべて5分きざみ)
+   ・基本は時分ともズレた誤答(近い時刻)
+   ・ときどき「分は正解と同じで、時だけ±1〜2時間ズレた」誤答を混ぜる
+     (時と分の繰り上がり/繰り下がりを混同する、よくあるミスを想定) */
+function makeHourShiftWrong(ans){
+  const t=fmt(ans);
+  const shift=choice([-2,-1,1,2]);
+  const cand=(((t.h+shift)*60 + t.mm)%1440+1440)%1440;
+  return cand;
+}
+function makeChoices(ans){
+  const correct=((ans%1440)+1440)%1440;
+  const used=new Set([correct]);
+  const opts=[ans];
+
+  /* 1/3くらいの確率で、時だけズレた誤答を1つ混ぜる */
+  if(Math.random()<0.35){
+    const hs=makeHourShiftWrong(ans);
+    if(!used.has(hs)){ used.add(hs); opts.push(hs); }
+  }
+
+  const offsets=[-30,-25,-20,-15,-10,-5,5,10,15,20,25,30];
+  const shuffled=offsets.slice().sort(()=>Math.random()-0.5);
+  for(const off of shuffled){
+    if(opts.length>=4) break;
+    const cand=(((ans+off)%1440)+1440)%1440;
+    if(used.has(cand)) continue;
+    used.add(cand); opts.push(cand);
+  }
+  while(opts.length<4){
+    const cand=(((ans + rInt(1,12)*5*(Math.random()<0.5?-1:1))%1440)+1440)%1440;
+    if(!used.has(cand)){ used.add(cand); opts.push(cand); }
+  }
+  return opts.sort(()=>Math.random()-0.5);
+}
+
 function makeProblem(level){
   const p = DIFF[state.settings.diff];
 
@@ -333,6 +389,7 @@ function makeProblem(level){
         type:"time",
         q:`<ruby>家<rt>いえ</rt></ruby>から<ruby>駅<rt>えき</rt></ruby>まで<ruby>歩<rt>ある</rt></ruby>いて ${walk}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>今<rt>いま</rt></ruby> ${jHL(now)}です。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>に<ruby>駅<rt>えき</rt></ruby>に<ruby>着<rt>つ</rt></ruby>くかな？`,
         ans,
+        choices: makeChoices(ans),
         exp:`${jPlain(now)} に ${walk}分<ruby>足<rt>た</rt></ruby>すと ${jPlain(ans)} です。`,
         anim:{ start:now, segs:[{kind:"walk", from:"家", to:"駅", dur:walk}], knownIdx:0, knownTime:now },
       };
@@ -344,6 +401,7 @@ function makeProblem(level){
         type:"time",
         q:`${jHL(arr)}に<ruby>駅<rt>えき</rt></ruby>に<ruby>着<rt>つ</rt></ruby>きたいな。<br><ruby>歩<rt>ある</rt></ruby>くと ${walk}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>に<ruby>家<rt>いえ</rt></ruby>を<ruby>出<rt>で</rt></ruby>たらいいかな？`,
         ans,
+        choices: makeChoices(ans),
         exp:`${jPlain(arr)} から ${walk}分<ruby>前<rt>まえ</rt></ruby>は ${jPlain(ans)} です。`,
         anim:{ start:ans, segs:[{kind:"walk", from:"家", to:"駅", dur:walk}], knownIdx:1, knownTime:arr, reverse:true },
       };
@@ -361,6 +419,7 @@ function makeProblem(level){
         type:"time",
         q:`${jHL(now)}に<ruby>電車<rt>でんしゃ</rt></ruby>に<ruby>乗<rt>の</rt></ruby>ったよ。<br><ruby>電車<rt>でんしゃ</rt></ruby>は ${ride}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>に<ruby>着<rt>つ</rt></ruby>くかな？`,
         ans,
+        choices: makeChoices(ans),
         exp:`${jPlain(now)} に ${ride}分<ruby>足<rt>た</rt></ruby>すと ${jPlain(ans)} です。`,
         anim:{ start:now, segs:[{kind:"train", from:"A駅", to:"B駅", dur:ride}], knownIdx:0, knownTime:now },
       };
@@ -372,6 +431,7 @@ function makeProblem(level){
         type:"time",
         q:`${jHL(arr)}に<ruby>着<rt>つ</rt></ruby>きたいな。<br><ruby>電車<rt>でんしゃ</rt></ruby>は ${ride}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>の<ruby>電車<rt>でんしゃ</rt></ruby>に<ruby>乗<rt>の</rt></ruby>ればいいかな？`,
         ans,
+        choices: makeChoices(ans),
         exp:`${jPlain(arr)} から ${ride}分<ruby>前<rt>まえ</rt></ruby>は ${jPlain(ans)} です。`,
         anim:{ start:ans, segs:[{kind:"train", from:"A駅", to:"B駅", dur:ride}], knownIdx:1, knownTime:arr, reverse:true },
       };
@@ -437,6 +497,7 @@ function makeProblem(level){
         type:"time",
         q:`B<ruby>駅<rt>えき</rt></ruby>に ${jHL(goal)}に<ruby>着<rt>つ</rt></ruby>きたいな。<br><ruby>家<rt>いえ</rt></ruby>からA<ruby>駅<rt>えき</rt></ruby>まで<ruby>歩<rt>ある</rt></ruby>いて ${walk}<ruby>分<rt>ふん</rt></ruby>、A<ruby>駅<rt>えき</rt></ruby>からB<ruby>駅<rt>えき</rt></ruby>まで<ruby>電車<rt>でんしゃ</rt></ruby>で ${ride}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>に<ruby>家<rt>いえ</rt></ruby>を<ruby>出<rt>で</rt></ruby>たらいいかな？`,
         ans,
+        choices: makeChoices(ans),
         exp:`${jPlain(goal)} から<ruby>電車<rt>でんしゃ</rt></ruby>の ${ride}分、<ruby>歩<rt>ある</rt></ruby>く ${walk}分 を<ruby>引<rt>ひ</rt></ruby>くと ${jPlain(ans)} です。`,
         anim:{ start:ans, segs:[{kind:"walk",from:"家",to:"A駅",dur:walk},{kind:"train",from:"A駅",to:"B駅",dur:ride}], knownIdx:2, knownTime:goal, reverse:true },
       };
@@ -448,6 +509,7 @@ function makeProblem(level){
         type:"time",
         q:`<ruby>今<rt>いま</rt></ruby> ${jHL(now)}です。<ruby>家<rt>いえ</rt></ruby>からA<ruby>駅<rt>えき</rt></ruby>まで<ruby>歩<rt>ある</rt></ruby>いて ${walk}<ruby>分<rt>ふん</rt></ruby>、A<ruby>駅<rt>えき</rt></ruby>からB<ruby>駅<rt>えき</rt></ruby>まで<ruby>電車<rt>でんしゃ</rt></ruby>で ${ride}<ruby>分<rt>ふん</rt></ruby>かかるよ。<br><ruby>何時<rt>なんじ</rt></ruby><ruby>何分<rt>なんぷん</rt></ruby>にB<ruby>駅<rt>えき</rt></ruby>に<ruby>着<rt>つ</rt></ruby>くかな？`,
         ans,
+        choices: makeChoices(ans),
         exp:`${jPlain(now)} に ${walk}分、${ride}分<ruby>足<rt>た</rt></ruby>すと ${jPlain(ans)} です。`,
         anim:{ start:now, segs:[{kind:"walk",from:"家",to:"A駅",dur:walk},{kind:"train",from:"A駅",to:"B駅",dur:ride}], knownIdx:0, knownTime:now },
       };
@@ -488,6 +550,12 @@ function bindSettings(){
     b.addEventListener("click",()=>{
       document.querySelectorAll("#seg-direction button").forEach(x=>x.classList.remove("on"));
       b.classList.add("on"); state.settings.direction=b.dataset.v;
+    });
+  });
+  document.querySelectorAll("#seg-inputmode button").forEach(b=>{
+    b.addEventListener("click",()=>{
+      document.querySelectorAll("#seg-inputmode button").forEach(x=>x.classList.remove("on"));
+      b.classList.add("on"); state.settings.inputMode=b.dataset.v;
     });
   });
   document.querySelectorAll("#seg-sound button").forEach(b=>{
@@ -606,13 +674,19 @@ function buildTimeWheels(defaultH, defaultM){
 /* ============================================================
    こたえ入力の いま の 値
 ============================================================ */
-let inH=8, inM=0, pickSel=null;
+let inH=8, inM=0, pickSel=null, choiceSel=null;
+
+/* れべる1/2/5(type==="time")のときだけ、この問題の答え方(wheel/choice)を もつ */
+function currentInputMode(){
+  return state.problems[state.idx]._inputMode || state.settings.inputMode;
+}
 
 function renderQuestion(){
   stopAnimAll();
   state.answered=false; state.revealed=false;
-  pickSel=null;
+  pickSel=null; choiceSel=null;
   const p=state.problems[state.idx];
+  if(p.type==="time" && !p._inputMode){ p._inputMode = state.settings.inputMode; }
 
   document.getElementById("progress").innerHTML=`<ruby>問題<rt>もんだい</rt></ruby> ${state.idx+1} / ${state.problems.length}`;
   document.getElementById("question").innerHTML=p.q;
@@ -628,38 +702,74 @@ function renderQuestion(){
     setupAnimUI(p);
   }
 
+  renderModeSwitch(p);
+  renderAnswerArea(p);
+  buildButtons();
+}
+
+/* 答え方(ドラムロール/4択)の切り替えボタン。type==="time"の問題(れべる1/2/5)にのみ表示 */
+function renderModeSwitch(p){
+  const slot=document.getElementById("mode-switch-slot");
+  if(p.type!=="time"){ slot.innerHTML=""; return; }
+  slot.innerHTML=`
+    <div class="mode-switch">
+      <button data-v="wheel" class="${p._inputMode==="wheel"?"on":""}">ドラムロール</button>
+      <button data-v="choice" class="${p._inputMode==="choice"?"on":""}">4<ruby>択<rt>たく</rt></ruby></button>
+    </div>`;
+  slot.querySelectorAll("button").forEach(b=>{
+    b.addEventListener("click",()=>{
+      if(p._inputMode===b.dataset.v) return;
+      p._inputMode=b.dataset.v;
+      renderModeSwitch(p);
+      renderAnswerArea(p);
+    });
+  });
+}
+
+/* こたえ入力エリアを、問題タイプ・入力方式にあわせて描画 */
+function renderAnswerArea(p){
   const slot=document.getElementById("answer-slot");
   if(p.type==="time"){
-    slot.innerHTML=`
-      <div class="answer-area">
-        <div class="wheel-col">
-          <div class="cap"><ruby>何時<rt>なんじ</rt></ruby></div>
-          <div class="wheel-outer">
-            <div class="wheel" id="wheel-h"><div class="wheel-track"></div></div>
-            <div class="wheel-fade-top"></div>
-            <div class="wheel-fade-bottom"></div>
-            <div class="wheel-highlight"></div>
+    if(p._inputMode==="choice"){
+      choiceSel=null;
+      slot.innerHTML=`<div class="choice-area">` + p.choices.map(c=>
+        `<button class="choice-btn" data-v="${c}">${jPlain(c)}</button>`).join("") + `</div>`;
+      slot.querySelectorAll(".choice-btn").forEach(el=>{
+        el.addEventListener("click",()=>{
+          slot.querySelectorAll(".choice-btn").forEach(x=>x.classList.remove("sel"));
+          el.classList.add("sel"); choiceSel=parseInt(el.dataset.v);
+        });
+      });
+    }else{
+      slot.innerHTML=`
+        <div class="answer-area">
+          <div class="wheel-col">
+            <div class="cap"><ruby>何時<rt>なんじ</rt></ruby></div>
+            <div class="wheel-outer">
+              <div class="wheel" id="wheel-h"><div class="wheel-track"></div></div>
+              <div class="wheel-fade-top"></div>
+              <div class="wheel-fade-bottom"></div>
+              <div class="wheel-highlight"></div>
+            </div>
+            <span class="unit"><ruby>時<rt>じ</rt></ruby></span>
           </div>
-          <span class="unit"><ruby>時<rt>じ</rt></ruby></span>
-        </div>
-        <div class="wheel-col">
-          <div class="cap"><ruby>何分<rt>なんぷん</rt></ruby></div>
-          <div class="wheel-outer">
-            <div class="wheel" id="wheel-m"><div class="wheel-track"></div></div>
-            <div class="wheel-fade-top"></div>
-            <div class="wheel-fade-bottom"></div>
-            <div class="wheel-highlight"></div>
+          <div class="wheel-col">
+            <div class="cap"><ruby>何分<rt>なんぷん</rt></ruby></div>
+            <div class="wheel-outer">
+              <div class="wheel" id="wheel-m"><div class="wheel-track"></div></div>
+              <div class="wheel-fade-top"></div>
+              <div class="wheel-fade-bottom"></div>
+              <div class="wheel-highlight"></div>
+            </div>
+            <span class="unit"><ruby>分<rt>ふん</rt></ruby></span>
           </div>
-          <span class="unit"><ruby>分<rt>ふん</rt></ruby></span>
-        </div>
-      </div>`;
-    buildTimeWheels(8,0);
+        </div>`;
+      buildTimeWheels(8,0);
+    }
   }else{
     slot.innerHTML=`<div class="tt-wrap">${renderTimetable(p)}</div>`;
     bindPick();
   }
-
-  buildButtons();
 }
 
 /* 時刻表 えがく */
@@ -710,9 +820,14 @@ function checkAnswer(){
   const fb=document.getElementById("feedback");
   let mine, correct=p.ans;
   if(p.type==="time"){
-    if(wheelH) inH=wheelH.getNearestValue();
-    if(wheelM) inM=wheelM.getNearestValue();
-    mine=inH*60+inM;
+    if(p._inputMode==="choice"){
+      if(choiceSel===null){ fb.className="feedback ng"; fb.innerHTML=`<ruby>答<rt>こた</rt></ruby>えを<ruby>選<rt>えら</rt></ruby>んでね`; return; }
+      mine=choiceSel;
+    }else{
+      if(wheelH) inH=wheelH.getNearestValue();
+      if(wheelM) inM=wheelM.getNearestValue();
+      mine=inH*60+inM;
+    }
   }
   else{
     if(pickSel===null){ fb.className="feedback ng"; fb.innerHTML=`<ruby>電車<rt>でんしゃ</rt></ruby>を<ruby>選<rt>えら</rt></ruby>んでね`; return; }
@@ -728,6 +843,11 @@ function checkAnswer(){
     document.getElementById("explain").classList.add("show");
     document.getElementById("btn-next").disabled=false;
     highlightAnswerRow(p);
+    if(p.type==="time" && p._inputMode==="choice"){
+      document.querySelectorAll('#answer-slot .choice-btn').forEach(x=>{
+        if(parseInt(x.dataset.v)===(((correct%1440)+1440)%1440)) x.classList.add("sel");
+      });
+    }
     if(p.anim) revealAndPlayAnim(p);
   }else{
     fb.className="feedback ng"; fb.innerHTML=`<ruby>惜<rt>お</rt></ruby>しいね。　もう<ruby>一度<rt>いちど</rt></ruby>やってみてね`;
@@ -750,6 +870,10 @@ function revealAnswer(){
   document.getElementById("btn-next").disabled=false;
   if(p.type==="pick"){
     document.querySelectorAll('#answer-slot [data-v]').forEach(x=>{
+      if(parseInt(x.dataset.v)===((p.ans%1440+1440)%1440)) x.classList.add("sel");
+    });
+  }else if(p.type==="time" && p._inputMode==="choice"){
+    document.querySelectorAll('#answer-slot .choice-btn').forEach(x=>{
       if(parseInt(x.dataset.v)===((p.ans%1440+1440)%1440)) x.classList.add("sel");
     });
   }
